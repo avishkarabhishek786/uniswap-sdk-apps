@@ -6,9 +6,6 @@ const {ChainId, Token, WETH, Fetcher, Trade, Route, TokenAmount, TradeType, Perc
 
 const path = require('path')
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') })
-// const [network, setNetwork] = useState(undefined);
-// const [buyingToken, setBuyingToken] = useState(undefined);
-
 
 const init = async() => {
     
@@ -24,8 +21,17 @@ const init = async() => {
         "DAI": "0xad6d458402f60fd3bd25163575031acdce07538d"
     }
     
-    const receiverAddress = '0x512aC4F5b92ce3F8735CedA491360a01f5F9A7d6';
-    const tradeAmount = '0.01';
+    const receiverAddress = process.env.REACT_APP_USER_ETH_ADDRESS;
+    console.log(receiverAddress);
+    let tradeAmount = Number(document.getElementById('eth_amount').value);
+
+    if(tradeAmount <= 0) {
+        alert("Invalid amount entered");
+        return false;
+    }
+
+    tradeAmount = tradeAmount.toString();
+    console.log(tradeAmount);
     
     const chainId = ChainId[network];
     
@@ -57,6 +63,10 @@ const init = async() => {
     
     amountOutMin = BigNumber.from(amountOutMin).toHexString()
     
+
+    let proceed_to_trade = window.confirm(`You will get ${weth_to_dai*tradeAmount} Dai after the trade. Proceed?`);
+    if(!proceed_to_trade) return false;
+
     const path = [weth.address, dai.address]
     const to = receiverAddress // should be a checksummed recipient address
     const deadline = Math.floor(Date.now() / 1000) + 60 * max_trade_life // 20 minutes from the current Unix time
@@ -92,6 +102,11 @@ const init = async() => {
     //return;
     let gasPrice = await provider.getGasPrice();
     console.log(gasPrice._hex);
+    console.log(value);
+
+    console.log(amountOutMin);
+    console.log(to);
+    console.log(path);
 
     const tx = await uniswap.swapExactETHForTokens(
         amountOutMin,
@@ -102,6 +117,7 @@ const init = async() => {
     )
 
     console.log('Tx Hash:', tx.hash);
+    alert(`Tx successful. Please visit ${network} network block explorer to see tx: ${tx.hash}`);
 
     const receipt = await tx.wait();
     console.log(receipt.blockNumber);
@@ -109,9 +125,49 @@ const init = async() => {
 }
 
 function App() {
+
+    // const [network, setNetwork] = useState(undefined);
+    // const [buyingToken, setBuyingToken] = useState(undefined);
+    // const [receiverAddress, setReceiverAddress] = useState(undefined);
+
+    // useEffect(()=>{
+    //     setNetwork('ROPSTEN');
+    //     setBuyingToken('0xad6d458402f60fd3bd25163575031acdce07538d'); // Dai
+    //     setReceiverAddress(process.env.REACT_APP_USER_ETH_ADDRESS);
+
+    // }, []);
+
   return (
-    <div className="App">
-        <button onClick={()=>init()} >Click</button>
+      <div className="container">
+            <div className="alert alert-warning" role="alert">
+                UI is under development. Please refer to App.js for better understanding of the app.
+            </div>
+          <div className="row">
+              <div className="col-sm">
+
+              </div>
+              <div className="col-sm">
+                  <div className="card">
+                      <div className="card-header">
+                            Uniswap: Buy DAI for ETH (ROPSTEN)
+                      </div>
+                      <div className="card-body">
+                           <h5>Enter amount in Ether</h5> 
+                           <div className="input-group">
+                                <input type="text" className="form-control" 
+                                id = "eth_amount"
+                                aria-label="Ether amount (with dot and two decimal places)"/>
+                                <button onClick={()=>init()} className="btn btn-primary">ETH Amount</button>
+                            </div>
+                      </div>
+                  </div>
+              </div>
+              <div className="col-sm">
+
+              </div>
+          </div>
+
+        
     </div>
   );
 }
