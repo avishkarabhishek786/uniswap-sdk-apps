@@ -1,11 +1,11 @@
 import './App.css';
 import React, {useState, useEffect, useReducer, useCallback} from 'react';
+import JSBI from 'jsbi/dist/jsbi.mjs';
 const { ethers, BigNumber } = require("ethers");
-const {ChainId, Token, WETH, Fetcher, Trade, Route, TokenAmount, TradeType, Percent} = require('@uniswap/sdk')
+const {ChainId, Token, WETH, Fetcher, Trade, Route, TokenAmount, TradeType, Percent, CurrencyAmount} = require('@uniswap/sdk')
 
-//require('dotenv').config()
-require('dotenv').config({ path: '../.env' })
-
+const path = require('path')
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') })
 // const [network, setNetwork] = useState(undefined);
 // const [buyingToken, setBuyingToken] = useState(undefined);
 
@@ -25,7 +25,7 @@ const init = async() => {
     }
     
     const receiverAddress = '0x512aC4F5b92ce3F8735CedA491360a01f5F9A7d6';
-    const tradeAmount = '1000000000000000000';
+    const tradeAmount = '0.01';
     
     const chainId = ChainId[network];
     
@@ -37,21 +37,21 @@ const init = async() => {
     const weth = WETH[chainId]
     const pair = await Fetcher.fetchPairData(dai, weth)
     const route = new Route([pair], weth)
-    const tradeAmountBN = new TokenAmount(weth, tradeAmount);
-
+    // Convert input amount in wei
+    const tradeAmountWei = ethers.utils.parseEther(tradeAmount);
+    console.log(tradeAmountWei);
+    const tradeAmountBN = new TokenAmount(weth, JSBI.BigInt(tradeAmountWei));
+    
     //console.log(tradeAmountBN);
     const trade = new Trade(route, tradeAmountBN, TradeType.EXACT_INPUT)
-    //console.log(trade);
+    console.log(trade.inputAmount.toExact());
+  
     //console.log(trade.execution_price);
     const weth_to_dai = route.midPrice.toSignificant(6)
     const dai_to_weth = route.midPrice.invert().toSignificant(6)
     const execution_price = trade.executionPrice.toSignificant(6)
     const nextMidPrice = trade.nextMidPrice.toSignificant(6)
     const slippageTolerance = new Percent('50', '10000') // 50 bips, or 0.50%
-    //console.log(slippageTolerance);
-    //console.log(CurrencyAmount.ether(JSBI.BigInt(100)));
-    //console.log(trade.minimumAmountOut(slippageTolerance));
-    //return console.log(trade.minimumAmountOut(slippageTolerance));
     // Decimal values when converted to BigInt fail later in tx. Need to convert to Int
     let amountOutMin = parseInt(trade.minimumAmountOut(slippageTolerance).toExact()) // needs to be converted to e.g. hex
     
@@ -60,20 +60,14 @@ const init = async() => {
     const path = [weth.address, dai.address]
     const to = receiverAddress // should be a checksummed recipient address
     const deadline = Math.floor(Date.now() / 1000) + 60 * max_trade_life // 20 minutes from the current Unix time
-    const value = trade.inputAmount.toSignificant(6) // // needs to be converted to e.g. hex
     
-    //console.log(trade.inputAmount);
-    console.log(amountOutMin);
-
-    // console.log("1 weth to dai: ", weth_to_dai);
-    // console.log("1 dai to weth: ", dai_to_weth);
-    // console.log("execution_price: ", execution_price);
-    // console.log("nextMidPrice: ", nextMidPrice);
-     console.log(value);
-
-    // const provider = ethers.getDefaultProvider(network, {
-    //     infura: "https://ropsten.infura.io/v3/eaf58e744a7b4555a054e920e76fad12"
-    // });
+    // Convert input amount back to wei
+    const value = tradeAmountWei._hex // // needs to be converted to e.g. hex
+    
+    console.log("1 weth to dai: ", weth_to_dai);
+    console.log("1 dai to weth: ", dai_to_weth);
+    console.log("execution_price: ", execution_price);
+    console.log("nextMidPrice: ", nextMidPrice);
 
     const provider = new ethers.providers.Web3Provider(window.ethereum)
 
@@ -96,15 +90,15 @@ const init = async() => {
     // console.log("gasPrice", 20e9);
 
     //return;
-    let gasPrice = provider.getGasPrice();
-    console.log(gasPrice);
+    let gasPrice = await provider.getGasPrice();
+    console.log(gasPrice._hex);
 
     const tx = await uniswap.swapExactETHForTokens(
         amountOutMin,
         path,
         to,
         deadline,
-        {value, gasPrice}
+        {value, gasPrice:gasPrice._hex}
     )
 
     console.log('Tx Hash:', tx.hash);
@@ -113,8 +107,6 @@ const init = async() => {
     console.log(receipt.blockNumber);
 
 }
-
-//init();
 
 function App() {
   return (
