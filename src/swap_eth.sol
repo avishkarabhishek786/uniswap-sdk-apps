@@ -133,6 +133,8 @@ contract UniswapExample {
   {
     // amountOutMin must be retrieved from an oracle of some kind
     IERC20 token = IERC20(ercToken);
+    // This contract must have enough token balance to send
+    require(token.balanceOf(address(this))>=amountIn, "token balance not enough for swap to ether");
     require(token.approve(address(uniswapRouter),0),'approve failed');
     require(token.approve(address(uniswapRouter),amountIn),'approve failed');
     uint deadline = block.timestamp + valid_upto_seconds;
@@ -140,12 +142,12 @@ contract UniswapExample {
     return output_amounts;
   }
   
-  function getEstimatedETHforToken(uint tokenAmount) public view returns (uint[] memory) {
+  function getMinOutputforInput(uint tokenAmount) public view returns (uint[] memory) {
     return uniswapRouter.getAmountsIn(tokenAmount, getPathForETHtoToken());
   }
   
-  function getEstimatedTokenforETH(uint EthAmount) public view returns (uint[] memory) {
-    return uniswapRouter.getAmountsIn(EthAmount, getPathForTokentoETH());
+  function getMaxOutputForInput(uint EthAmount) public view returns (uint[] memory) {
+    return uniswapRouter.getAmountsOut(EthAmount, getPathForTokentoETH());
   }
 
   function getPathForETHtoToken() private view returns (address[] memory) {
@@ -165,7 +167,11 @@ contract UniswapExample {
   }
 
   function tokenBalanceOf(address account) returns(uint256) {
-      IERC20(ercToken).balanceOf(account);
+      return IERC20(ercToken).balanceOf(account);
+  }
+
+  function etherBalanceOf() returns(uint256) {
+      return address(this).balance();
   } 
   
   // important to receive ETH
