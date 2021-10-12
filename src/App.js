@@ -34,7 +34,8 @@ const WETH_TO_ERCTOKEN = async (INPUT_TOKEN = {}) => {
 
     const USER_PRIVATE_KEY = Buffer.from(process.env.REACT_APP_USER_PRIVATE_KEY, 'hex');
 
-    const receiverAddress = ethers.utils.getAddress(process.env.REACT_APP_USER_ETH_ADDRESS);
+    const receiverAddressWallet = new ethers.Wallet(process.env.REACT_APP_USER_PRIVATE_KEY);
+    const receiverAddress  = receiverAddressWallet.address;    
     console.log(receiverAddress);
     let tradeAmount = Number(document.getElementById('eth_amount').value);
 
@@ -139,7 +140,8 @@ const ERCTOKEN_TO_WETH = async (INPUT_TOKEN = {}) => {
 
         const USER_PRIVATE_KEY = Buffer.from(process.env.REACT_APP_USER_PRIVATE_KEY, 'hex');
 
-        const receiverAddress = ethers.utils.getAddress(process.env.REACT_APP_USER_ETH_ADDRESS);
+        const receiverAddressWallet = new ethers.Wallet(process.env.REACT_APP_USER_PRIVATE_KEY);
+        const receiverAddress  = receiverAddressWallet.address;
         console.log(receiverAddress);
         let tradeAmount = document.getElementById('ercToken_amount').value;
 
